@@ -19,6 +19,8 @@ namespace Aurora\Modules\GMailConnector;
 class Module extends \Aurora\System\Module\AbstractModule
 {
 
+	protected $sService = 'gmail';
+
 	protected $aRequireModules = array(
 		'OAuthIntegratorWebclient',
 		'GoogleAuthWebclient'
@@ -31,12 +33,31 @@ class Module extends \Aurora\System\Module\AbstractModule
 
 	public function init()
 	{
-		$this->subscribeEvent('GoogleAuthWebclient::PopulateScopes', array($this, 'onPopulateScopes'));
+		$this->subscribeEvent('PopulateScopes', array($this, 'onPopulateScopes'));
 
-		$this->subscribeEvent('Google::GetSettings', array($this, 'onGetSettings'));
-		$this->subscribeEvent('Google::UpdateSettings::after', array($this, 'onAfterUpdateSettings'));
+		$this->subscribeEvent('Mail::BeforeDeleteAccount', array($this, 'onBeforeDeleteAccount'));
 		$this->subscribeEvent('OAuthIntegratorAction', array($this, 'onOAuthIntegratorAction'));
+		$this->subscribeEvent('ResetAccessToken', array($this, 'onResetAccessToken'));
+		$this->subscribeEvent('GetAccessToken', array($this, 'onGetAccessToken'));
 	}
+
+		/**
+	 * Deletes cPanel account, its aliases, forward, autoresponder and filters.
+	 * @param array $aArgs
+	 * @param mixed $mResult
+	 */
+	public function onBeforeDeleteAccount($aArgs, &$mResult)
+	{
+		$oAccount = $aArgs['Account'];
+		if ($oAccount instanceof \Aurora\Modules\Mail\Classes\Account)
+		{
+			\Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->DeleteAccount(
+				$oAccount->XOAuth,
+				$oAccount->Email
+			);
+		}
+	}
+
 
 	public function onPopulateScopes($sScope, &$aResult)
 	{
@@ -57,77 +78,108 @@ class Module extends \Aurora\System\Module\AbstractModule
 	 * @param string $aArgs Service type to verify if data should be passed.
 	 * @param boolean|array $mResult variable passed by reference to take the result.
 	 */
-	public function onGetSettings($aArgs, &$mResult)
+	public function onOAuthIntegratorAction($aArgs, &$mResult)
 	{
-		$oUser = \Aurora\System\Api::getAuthenticatedUser();
-
-		if (!empty($oUser))
+		if ($aArgs['Service'] === $this->sService)
 		{
-			$aScope = array(
-				'Name' => 'mail',
-				'Description' => $this->i18N('SCOPE_MAIL'),
-				'Value' => false
-			);
-			if ($oUser->Role === \Aurora\System\Enums\UserRole::SuperAdmin)
-			{
-				$aScope['Value'] = $this->issetScope('mail');
-				$mResult['Scopes'][] = $aScope;
-			}
-			if ($oUser->isNormalOrTenant())
-			{
-				if ($aArgs['OAuthAccount'] instanceof \Aurora\Modules\OAuthIntegratorWebclient\Classes\Account)
-				{
-					$aScope['Value'] = $aArgs['OAuthAccount']->issetScope('mail');
-				}
-				if ($this->issetScope('mail'))
-				{
-					$mResult['Scopes'][] = $aScope;
-				}
-			}
-		}
-	}
+			$sOAuthScopes = isset($_COOKIE['oauth-scopes']) ? $_COOKIE['oauth-scopes'] : '';
+			$aGoogleScopes = [
+				'https://www.googleapis.com/auth/userinfo.email',
+				'https://www.googleapis.com/auth/userinfo.profile'
+			];
+			$this->broadcastEvent('PopulateScopes', $sOAuthScopes, $aGoogleScopes);
 
-	public function onAfterUpdateSettings($aArgs, &$mResult)
-	{
-		$sScope = '';
-		if (isset($aArgs['Scopes']) && is_array($aArgs['Scopes']))
-		{
-			foreach($aArgs['Scopes'] as $aScope)
+			$mResult = false;
+			$oConnector = new Classes\Connector($this);
+			if ($oConnector)
 			{
-				if ($aScope['Name'] === 'mail')
+				$oGoogleModule = \Aurora\System\Api::GetModule('Google');
+				if ($oGoogleModule)
 				{
-					if ($aScope['Value'])
+					$sId = $oGoogleModule->getConfig('Id');
+					$sSecret = $oGoogleModule->getConfig('Secret');
+
+					$mResult = $oConnector->Init(
+						$sId,
+						$sSecret,
+						[$sOAuthScopes, \implode(' ', $aGoogleScopes)]
+					);
+					if (isset($mResult['type']))
 					{
-						$sScope = 'mail';
-						break;
+						$mResult['type'] = $this->sService;
+
+						$oAccount = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->GetAccount($mResult['type'], $mResult['email']);
+						if ($oAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Classes\Account)
+						{
+							$mResult = false;
+						}
 					}
 				}
 			}
+			return true;
 		}
-		$this->setConfig('Scopes', $sScope);
-		$this->saveModuleConfig();
 	}
 
-		/**
-	 * Passes data to connect to service.
-	 *
-	 * @ignore
-	 * @param string $aArgs Service type to verify if data should be passed.
-	 * @param boolean|array $mResult variable passed by reference to take the result.
-	 */
-	public function onOAuthIntegratorAction($aArgs, &$mResult)
+	public function onResetAccessToken($aArgs)
 	{
-		if ($aArgs['Service'] === 'gmail')
+		if ($aArgs['Service'] === $this->sService)
 		{
-			$aArgs['Service'] = 'google';
-			$this->broadcastEvent(
-				'RevokeAccessToken',
-				$aArgs,
-				$mResult
-			);
+			$oConnector = new Classes\Connector($this);
+			if ($oConnector)
+			{
+				$oGoogleModule = \Aurora\System\Api::GetModule('Google');
+				if ($oGoogleModule)
+				{
+					$mResult = $oConnector->ResetAccessToken(
+						$oGoogleModule->getConfig('Id'),
+						$oGoogleModule->getConfig('Secret')
+					);
+				}
+			}
+		}
+	}
+
+	public function onGetAccessToken($aArgs, &$mResult)
+	{
+		if ($aArgs['Service'] === $this->sService && isset($aArgs['Account']))
+		{
 			$mResult = false;
-			setcookie('oauth-redirect', 'connect');
-			\Aurora\System\Api::Location2('./?oauth=google');
+			$oAccount = $aArgs['Account'];
+			$oTokenData = \json_decode($oAccount->AccessToken);
+			if ($oTokenData)
+			{
+				$iCreated = (int) $oTokenData->created;
+				$iExpiresIn = (int) $oTokenData->expires_in;
+				if (time() > ($iCreated + $iExpiresIn) && isset($oAccount->RefreshToken))
+				{
+					$oGoogleModule = \Aurora\System\Api::GetModule('Google');
+					if ($oGoogleModule)
+					{
+						$oConnector = new Classes\Connector($this);
+						$aResult = $oConnector->RefreshAccessToken(
+							$oGoogleModule->getConfig('Id'),
+							$oGoogleModule->getConfig('Secret'),
+							$oAccount->RefreshToken
+						);
+						if (isset($aResult['access_token']))
+						{
+							$oTokenData->access_token = $aResult['access_token'];
+							$oTokenData->created = time();
+							$oTokenData->expires_in = $aResult['expires_in'];
+
+							$mResult = $oTokenData->access_token;
+
+							$oAccount->AccessToken = \json_encode($oTokenData);
+							$oAccount->Save();
+						}
+					}
+				}
+				else
+				{
+					$mResult = $oTokenData->access_token;
+				}
+			}
+
 			return true;
 		}
 	}
