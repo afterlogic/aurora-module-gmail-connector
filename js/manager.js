@@ -21,7 +21,7 @@ module.exports = function (oAppData) {
 					oParams.aOauthConnectorsData.push({
 						Name: 'Gmail',
 						Type: 'gmail',
-						IconUrl: 'static/styles/images/modules/GMailConnector/logo_gmail.png'
+						IconUrl: 'static/styles/images/modules/%ModuleName%/logo_gmail.png'
 					})
 				}, this));
 			}
