@@ -7,7 +7,7 @@ export default {
 
   requiredModules: ['MailWebclient'],
 
-  init (appData) {
+  initSubscriptions (appData) {
     eventBus.$on('MailWebclient::GetOauthConnectorsData', params => {
       if (!_.isArray(params.oauthConnectorsData)) {
         params.oauthConnectorsData = []
