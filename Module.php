@@ -49,7 +49,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 	public function onBeforeDeleteAccount($aArgs, &$mResult)
 	{
 		$oAccount = $aArgs['Account'];
-		if ($oAccount instanceof \Aurora\Modules\Mail\Classes\Account)
+		if ($oAccount instanceof \Aurora\Modules\Mail\Models\MailAccount)
 		{
 			\Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->DeleteAccount(
 				$oAccount->XOAuth,
@@ -109,7 +109,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 						$mResult['type'] = $this->sService;
 
 						$oAccount = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->GetAccount($mResult['type'], $mResult['email']);
-						if ($oAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Classes\Account)
+						if ($oAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Models\OauthAccount)
 						{
 							$mResult = false;
 						}
