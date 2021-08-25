@@ -128,7 +128,7 @@ class Module extends \Aurora\System\Module\AbstractModule
 			if ($oConnector)
 			{
 				$oGoogleModule = \Aurora\System\Api::GetModule('Google');
-				if ($oGoogleModule)
+				if ($oGoogleModule && $oGoogleModule->getConfig('EnableModule'))
 				{
 					$mResult = $oConnector->ResetAccessToken(
 						$oGoogleModule->getConfig('Id'),
