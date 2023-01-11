@@ -5,7 +5,7 @@
  * For full statements of the licenses see LICENSE-AFTERLOGIC and LICENSE-AGPL3 files.
  */
 
-namespace Aurora\Modules\GmailConnector\Classes;
+namespace Aurora\Modules\GMailConnector\Classes;
 
 /**
  * @license https://www.gnu.org/licenses/agpl-3.0.html AGPL-3.0
