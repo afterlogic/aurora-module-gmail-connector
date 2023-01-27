@@ -14,5 +14,5 @@ namespace Aurora\Modules\GMailConnector\Classes;
  */
 class Connector extends \Aurora\Modules\GoogleAuthWebclient\Classes\Connector
 {
-	public $Name = 'gmail';
+    public $Name = 'gmail';
 }
