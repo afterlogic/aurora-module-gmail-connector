@@ -25,6 +25,15 @@ class Module extends \Aurora\System\Module\AbstractModule
         'GoogleAuthWebclient'
     );
 
+    /**
+     *
+     * @return Module
+     */
+    public static function Decorator()
+    {
+        return parent::Decorator();
+    }
+
     protected function issetScope($sScope)
     {
         return \in_array($sScope, \explode(' ', $this->getConfig('Scopes')));
@@ -131,6 +140,7 @@ class Module extends \Aurora\System\Module\AbstractModule
     {
         if ($aArgs['Service'] === $this->sService && isset($aArgs['Account'])) {
             $mResult = false;
+            /** @var \Aurora\Modules\OAuthIntegratorWebclient\Models\OauthAccount $oAccount */
             $oAccount = $aArgs['Account'];
             $oTokenData = \json_decode($oAccount->AccessToken);
             if ($oTokenData) {
@@ -153,7 +163,7 @@ class Module extends \Aurora\System\Module\AbstractModule
                             $mResult = $oTokenData->access_token;
 
                             $oAccount->AccessToken = \json_encode($oTokenData);
-                            $oAccount->Save();
+                            $oAccount->save();
                         }
                     }
                 } else {
