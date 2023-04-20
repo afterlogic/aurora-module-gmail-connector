@@ -45,11 +45,6 @@ class Module extends \Aurora\System\Module\AbstractModule
         return $this->oModuleSettings;
     }
 
-    protected function issetScope($sScope)
-    {
-        return \in_array($sScope, \explode(' ', $this->oModuleSettings->Scopes));
-    }
-
     public function init()
     {
         $this->subscribeEvent('PopulateScopes', array($this, 'onPopulateScopes'));
