@@ -28,7 +28,14 @@ class Module extends \Aurora\System\Module\AbstractModule
     );
 
     /**
-     *
+     * @return Module
+     */
+    public static function getInstance()
+    {
+        return parent::getInstance();
+    }
+
+    /**
      * @return Module
      */
     public static function Decorator()
@@ -37,7 +44,6 @@ class Module extends \Aurora\System\Module\AbstractModule
     }
 
     /**
-     *
      * @return Settings
      */
     public function getModuleSettings()
@@ -102,10 +108,10 @@ class Module extends \Aurora\System\Module\AbstractModule
             $mResult = false;
             $oConnector = new Classes\Connector($this);
             if ($oConnector) {
-                $oGoogleModule = \Aurora\System\Api::GetModule('Google');
+                $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
                 if ($oGoogleModule) {
-                    $sId = $oGoogleModule->getConfig('Id');
-                    $sSecret = $oGoogleModule->getConfig('Secret');
+                    $sId = $oGoogleModule->oModuleSettings->Id;
+                    $sSecret = $oGoogleModule->oModuleSettings->Secret;
 
                     $mResult = $oConnector->Init(
                         $sId,
@@ -131,11 +137,11 @@ class Module extends \Aurora\System\Module\AbstractModule
         if ($aArgs['Service'] === $this->sService) {
             $oConnector = new Classes\Connector($this);
             if ($oConnector) {
-                $oGoogleModule = \Aurora\System\Api::GetModule('Google');
-                if ($oGoogleModule && $oGoogleModule->getConfig('EnableModule')) {
-                    $mResult = $oConnector->ResetAccessToken(
-                        $oGoogleModule->getConfig('Id'),
-                        $oGoogleModule->getConfig('Secret')
+                $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
+                if ($oGoogleModule && $oGoogleModule->oModuleSettings->EnableModule) {
+                    $oConnector->ResetAccessToken(
+                        $oGoogleModule->oModuleSettings->Id,
+                        $oGoogleModule->oModuleSettings->Secret
                     );
                 }
             }
@@ -153,12 +159,12 @@ class Module extends \Aurora\System\Module\AbstractModule
                 $iCreated = (int) $oTokenData->created;
                 $iExpiresIn = (int) $oTokenData->expires_in;
                 if (time() > ($iCreated + $iExpiresIn) && isset($oAccount->RefreshToken)) {
-                    $oGoogleModule = \Aurora\System\Api::GetModule('Google');
+                    $oGoogleModule = \Aurora\Modules\Google\Module::getInstance();
                     if ($oGoogleModule) {
                         $oConnector = new Classes\Connector($this);
                         $aResult = $oConnector->RefreshAccessToken(
-                            $oGoogleModule->getConfig('Id'),
-                            $oGoogleModule->getConfig('Secret'),
+                            $oGoogleModule->oModuleSettings->Id,
+                            $oGoogleModule->oModuleSettings->Secret,
                             $oAccount->RefreshToken
                         );
                         if (isset($aResult['access_token'])) {
