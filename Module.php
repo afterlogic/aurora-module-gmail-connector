@@ -61,7 +61,7 @@ class Module extends \Aurora\System\Module\AbstractModule
         $this->subscribeEvent('GetAccessToken', array($this, 'onGetAccessToken'));
     }
 
-        /**
+    /**
      * Deletes cPanel account, its aliases, forward, autoresponder and filters.
      * @param array $aArgs
      * @param mixed $mResult
