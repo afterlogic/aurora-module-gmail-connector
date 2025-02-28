@@ -53,8 +53,10 @@ class Module extends \Aurora\System\Module\AbstractModule
 
     public function init()
     {
+        session_start();
         $this->subscribeEvent('PopulateScopes', array($this, 'onPopulateScopes'));
 
+        $this->subscribeEvent('OAuthIntegratorWebclient::GetServiceTypes::after', array($this, 'onAfterGetServiceTypes'));
         $this->subscribeEvent('Mail::BeforeDeleteAccount', array($this, 'onBeforeDeleteAccount'));
         $this->subscribeEvent('OAuthIntegratorAction', array($this, 'onOAuthIntegratorAction'));
         $this->subscribeEvent('ResetAccessToken', array($this, 'onResetAccessToken'));
@@ -98,11 +100,13 @@ class Module extends \Aurora\System\Module\AbstractModule
     public function onOAuthIntegratorAction($aArgs, &$mResult)
     {
         if ($aArgs['Service'] === $this->sService) {
+
             $sOAuthScopes = isset($_COOKIE['oauth-scopes']) ? $_COOKIE['oauth-scopes'] : '';
             $aGoogleScopes = [
                 'https://www.googleapis.com/auth/userinfo.email',
                 'https://www.googleapis.com/auth/userinfo.profile'
             ];
+
             $this->broadcastEvent('PopulateScopes', $sOAuthScopes, $aGoogleScopes);
 
             $mResult = false;
@@ -120,11 +124,6 @@ class Module extends \Aurora\System\Module\AbstractModule
                     );
                     if (isset($mResult['type'])) {
                         $mResult['type'] = $this->sService;
-
-                        $oAccount = \Aurora\Modules\OAuthIntegratorWebclient\Module::Decorator()->GetAccount($mResult['type'], $mResult['email']);
-                        if ($oAccount instanceof \Aurora\Modules\OAuthIntegratorWebclient\Models\OauthAccount) {
-                            $mResult = false;
-                        }
                     }
                 }
             }
@@ -185,5 +184,25 @@ class Module extends \Aurora\System\Module\AbstractModule
 
             return true;
         }
+    }
+
+    /* Adds service type to array passed by reference.
+    *
+    * @ignore
+    * @param array $aArgs
+    * @param array $aServices Array with services names passed by reference.
+    */
+    public function onAfterGetServiceTypes($aArgs, &$aServices)
+    {
+            $oModule = \Aurora\Modules\Google\Module::getInstance();
+
+            if ($oModule) {
+                $sId = $oModule->oModuleSettings->Id;
+                $sSecret = $oModule->oModuleSettings->Secret;
+
+                if ($oModule->oModuleSettings->EnableModule && !empty($sId) && !empty($sSecret)) {
+                    $aServices[] = $this->sService;
+                }
+            }
     }
 }
