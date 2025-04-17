@@ -194,15 +194,15 @@ class Module extends \Aurora\System\Module\AbstractModule
     */
     public function onAfterGetServiceTypes($aArgs, &$aServices)
     {
-            $oModule = \Aurora\Modules\Google\Module::getInstance();
+        $oModule = \Aurora\Modules\Google\Module::getInstance();
 
-            if ($oModule) {
-                $sId = $oModule->oModuleSettings->Id;
-                $sSecret = $oModule->oModuleSettings->Secret;
+        if ($oModule) {
+            $sId = $oModule->oModuleSettings->Id;
+            $sSecret = $oModule->oModuleSettings->Secret;
 
-                if ($oModule->oModuleSettings->EnableModule && !empty($sId) && !empty($sSecret)) {
-                    $aServices[] = $this->sService;
-                }
+            if ($oModule->oModuleSettings->EnableModule && !empty($sId) && !empty($sSecret)) {
+                $aServices[] = $this->sService;
             }
+        }
     }
 }
