@@ -53,7 +53,6 @@ class Module extends \Aurora\System\Module\AbstractModule
 
     public function init()
     {
-        session_start();
         $this->subscribeEvent('PopulateScopes', array($this, 'onPopulateScopes'));
 
         $this->subscribeEvent('OAuthIntegratorWebclient::GetServiceTypes::after', array($this, 'onAfterGetServiceTypes'));
